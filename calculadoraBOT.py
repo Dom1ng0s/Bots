@@ -1,5 +1,6 @@
 import nextcord
 import os
+import asyncio
 from nextcord.ext import commands
 from dotenv import load_dotenv
 
@@ -37,5 +38,29 @@ async def multiplicar_numeros(interaction: nextcord.Interaction, numero1: int, n
 async def multiplicar_numeros(interaction: nextcord.Interaction, numero1: int, numero2:int):
     resultado = numero1 / numero2
     await interaction.response.send_message(f"O resultado de {numero1} / {numero2} = {resultado}")
+
+@bot.slash_command(name="temporizador",description="Avisa apos x unidades de tempo.")
+async def temporizador(interaction: nextcord.Interaction, tempo: int, unidade: str):
+    unidades_validas = ["segundos", "minutos", "horas"]
+    if unidade.lower() not in unidades_validas:
+        await interaction.response.send_message(f"Unidade inválida. Use uma das seguintes: {', '.join(unidades_validas)}")
+        return
+    
+    if unidade.lower() == "segundos":
+        tempo_real = tempo 
+    elif unidade.lower() == "minutos":
+        tempo_real = tempo*60
+    elif unidade.lower() == "horas":
+        tempo_real = tempo*3600
+    
+    await interaction.response.send_message(f"Ok! Temporizador definido para {tempo} {unidade}. Vou te avisar quando o tempo acabar.")
+
+    await asyncio.sleep(tempo_real)
+
+    await interaction.followup.send(f"⏰ **Bip bip, {interaction.user.mention}!** O seu temporizador de {tempo} {unidade} acabou!")
+
+
+
+    
 
 bot.run(TOKEN)
