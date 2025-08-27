@@ -67,33 +67,127 @@ async def temporizador(interaction: nextcord.Interaction, tempo: int, unidade: s
 
     asyncio.create_task(esperar_e_avisar())
 
-@bot.slash_command(name="tempo",description="traz informacoes sobre o tempo ao vivo.")
+
+@bot.slash_command(name="tempo", description="Traz informações sobre o tempo ao vivo.")
 async def tempo(interaction: nextcord.Interaction, cidade: str):
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={cidade}&appid={WEATHER_API_KEY}"
-    resposta = requests.get(url)
-    if resposta.status_code == 200:
-        ##print(resposta.status_code)
-        ##await interaction.response.send_message("Buscando informações...")
+    url = (
+        f"https://api.openweathermap.org/data/2.5/weather"
+        f"?q={cidade}"
+        f"&appid={WEATHER_API_KEY}"
+        f"&lang=pt_br"  
+    )
+
+    try:
+        resposta = requests.get(url, timeout=5)
+        
+        resposta.raise_for_status()
+
         dados_clima = resposta.json()
-        ##print(dados_clima)
 
         nome_cidade = dados_clima['name']
         temp_kelvin = dados_clima['main']['temp']
-        temperatura_celsius = temp_kelvin - 273.15
-        descricao = dados_clima['weather'][0]['description']
+        sensacao_kelvin = dados_clima['main']['feels_like']
+        descricao = dados_clima['weather'][0]['description'].capitalize()
         umidade = dados_clima['main']['humidity']
+        velocidade_vento = dados_clima['wind']['speed']
+        icone_clima = dados_clima['weather'][0]['icon']
+        url_icone = f"http://openweathermap.org/img/wn/{icone_clima}@2x.png"
+        
+        temperatura_celsius = temp_kelvin - 273.15
+        sensacao_celsius = sensacao_kelvin - 273.15
+        
+        velocidade_vento_kmh = velocidade_vento * 3.6
 
-        mensagem = (
-                f"🌦️ **Tempo agora em {nome_cidade}**\n"
-                f"--------------------------------------\n"
-                f"🌡️ **Temperatura:** {temperatura_celsius:.1f}°C\n"
-                f"📝 **Descrição:** {descricao.capitalize()}\n" 
-                f"💧 **Umidade:** {umidade}%\n"
+        embed = nextcord.Embed(
+            title=f"🌦️ Clima em {nome_cidade}",
+            description=f"**{descricao}**",
+            color=nextcord.Color.blue()
+        )
+        embed.set_thumbnail(url=url_icone)
+        
+        embed.add_field(name="🌡️ Temperatura", value=f"{temperatura_celsius:.1f}°C", inline=True)
+        embed.add_field(name="🤔 Sensação Térmica", value=f"{sensacao_celsius:.1f}°C", inline=True)
+        embed.add_field(name="💧 Umidade", value=f"{umidade}%", inline=True)
+        embed.add_field(name="🍃 Vento", value=f"{velocidade_vento_kmh:.1f} km/h", inline=True)
+        
+        embed.set_footer(text="Dados fornecidos por OpenWeatherMap")
+
+        await interaction.response.send_message(embed=embed)
+
+    except requests.exceptions.HTTPError as err:
+        if err.response.status_code == 404:
+            await interaction.response.send_message(
+                f"❌ Não consegui encontrar a cidade **'{cidade}'**. Por favor, verifique o nome e tente novamente."
             )
-        await interaction.response.send_message(mensagem)
+        elif err.response.status_code == 401:
+            print("Erro 401: Chave da API inválida. Verifique seu arquivo .env.")
+            await interaction.response.send_message(
+                "❌ Ocorreu um erro de configuração no bot. O administrador foi notificado."
+            )
+        else:
+            await interaction.response.send_message(
+                f"❌ Ocorreu um erro com a API do clima (Código: {err.response.status_code}). Tente novamente mais tarde."
+            )
+    except requests.exceptions.RequestException:
+        await interaction.response.send_message(
+            "❌ Não foi possível conectar à API do clima. Verifique sua conexão ou tente novamente mais tarde."
+        )
 
+@bot.slash_command(name="dolar",description="Traz a cotação do dolar ao vivo.")
+async def cotacao_dolar(interaction: nextcord.Interaction):
+
+
+    url = "https://api.frankfurter.app/latest?from=USD&to=BRL"
+
+    resposta = requests.get(url)
+
+    if resposta.status_code == 200:
+        dados = resposta.json()
+        ##print(dados)
+        taxa_brl = float(dados['rates']['BRL'])
+        data_atualizacao = dados['date']
+        embed = nextcord.Embed(
+            title="💵 Cotação do Dólar",
+            description=f"1 Dólar Americano (USD) equivale a **R$ {taxa_brl:,.2f}**".replace(",", "X").replace(".", ",").replace("X", "."),
+            color=nextcord.Color.blue()
+        )
+        
+        embed.set_footer(text=f"Dados do Banco Central Europeu | Atualizado em: {data_atualizacao}")
+
+        await interaction.response.send_message(embed=embed)
     else:
-        await interaction.response.send_message(f"Não consegui encontrar o tempo para a cidade '{cidade}'. Tem certeza que o nome está correto?")
+        print("A")
+        await interaction.response.send_message("Falha ao buscar a cotação do dólar.")
+
+
+
+
+@bot.slash_command(name="euro",description="Traz a cotação do Euro ao vivo.")
+async def cotacao_euro(interaction: nextcord.Interaction):
+
+
+    url = "https://api.frankfurter.app/latest?from=EUR&to=BRL"
+
+    resposta = requests.get(url)
+
+    if resposta.status_code == 200:
+        dados = resposta.json()
+        ##print(dados)
+        taxa_brl = float(dados['rates']['BRL'])
+        data_atualizacao = dados['date']
+        embed = nextcord.Embed(
+            title="💵 Cotação do Euro",
+            description=f"1 Euro (EUR) equivale a **R$ {taxa_brl:,.2f}**".replace(",", "X").replace(".", ",").replace("X", "."),
+            color=nextcord.Color.blue()
+        )
+        
+        embed.set_footer(text=f"Dados do Banco Central Europeu | Atualizado em: {data_atualizacao}")
+
+        await interaction.response.send_message(embed=embed)
+    else:
+        print("A")
+        await interaction.response.send_message("Falha ao buscar a cotação do Euro.")
+    
 
 
 
