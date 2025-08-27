@@ -1,11 +1,13 @@
 import nextcord
 import os
 import asyncio
+import requests
 from nextcord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
 TOKEN = os.getenv('TOKEN')
+WEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY')
 
 intents = nextcord.Intents.all()
 
@@ -64,5 +66,36 @@ async def temporizador(interaction: nextcord.Interaction, tempo: int, unidade: s
         await interaction.followup.send(f"⏰ **Bip bip, {interaction.user.mention}!** O seu temporizador de {tempo} {unidade} acabou!")
 
     asyncio.create_task(esperar_e_avisar())
+
+@bot.slash_command(name="tempo",description="traz informacoes sobre o tempo ao vivo.")
+async def tempo(interaction: nextcord.Interaction, cidade: str):
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={cidade}&appid={WEATHER_API_KEY}"
+    resposta = requests.get(url)
+    if resposta.status_code == 200:
+        ##print(resposta.status_code)
+        ##await interaction.response.send_message("Buscando informações...")
+        dados_clima = resposta.json()
+        ##print(dados_clima)
+
+        nome_cidade = dados_clima['name']
+        temp_kelvin = dados_clima['main']['temp']
+        temperatura_celsius = temp_kelvin - 273.15
+        descricao = dados_clima['weather'][0]['description']
+        umidade = dados_clima['main']['humidity']
+
+        mensagem = (
+                f"🌦️ **Tempo agora em {nome_cidade}**\n"
+                f"--------------------------------------\n"
+                f"🌡️ **Temperatura:** {temperatura_celsius:.1f}°C\n"
+                f"📝 **Descrição:** {descricao.capitalize()}\n" 
+                f"💧 **Umidade:** {umidade}%\n"
+            )
+        await interaction.response.send_message(mensagem)
+
+    else:
+        await interaction.response.send_message(f"Não consegui encontrar o tempo para a cidade '{cidade}'. Tem certeza que o nome está correto?")
+
+
+
 
 bot.run(TOKEN)
