@@ -1,2 +1,2 @@
 # Bots-Discord
-Parte da minha jornada de aprendizado na criação de bots para o discord
+Parte da minha jornada de aprendizado na criação de bots
